@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Portes FC" />
+  <title>Consulta de Portes y Entregas · Family Cash</title>
+  <!-- Tipografía geométrica limpia similar a la identidad visual de Family Cash -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,500;0,600;0,700;0,800;1,500;1,700&display=swap" rel="stylesheet">
+  <!-- Librería para leer archivos Excel (.xlsx / .xls) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --fc-black: #000000;
+      --fc-dark: #141414;
+      --fc-lime: #a7c800;
+      --fc-lime-bright: #b6d800;
+      --fc-lime-soft: #f4f9d8;
+      --fc-lime-border: #d9e878;
+      --fc-brown: #422918;
+      --fc-bg: #f5f6f8;
+      --fc-surface: #ffffff;
+      --fc-text: #111827;
+      --fc-muted: #6b7280;
+      --fc-border: #e5e7eb;
+      --fc-danger: #dc2626;
+      --fc-danger-bg: #fef2f2;
+      --fc-danger-border: #fecaca;
+      --shadow-card: 0 6px 24px rgba(0, 0, 0, 0.07);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--fc-bg);
+      color: var(--fc-text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Cabecera negra estilo web corporativa Family Cash */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background-color: var(--fc-black);
+      color: #ffffff;
+      border-bottom: 3px solid var(--fc-lime);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      padding: 14px 16px 16px 16px;
+    }
+
+    .header-inner {
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .brand-area {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .fc-logo-svg {
+      height: 36px;
+      width: auto;
+      flex-shrink: 0;
+      display: block;
+    }
+
+    @media (min-width: 600px) {
+      .fc-logo-svg {
+        height: 42px;
+      }
+    }
+
+    .app-subtitle-box {
+      border-left: 2px solid #333333;
+      padding-left: 12px;
+      min-width: 0;
+    }
+
+    .app-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--fc-lime);
+      white-space: nowrap;
+    }
+
+    .file-status {
+      font-size: 0.72rem;
+      color: #a3a3a3;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
+    }
+
+    @media (min-width: 600px) {
+      .file-status { max-width: 360px; }
+    }
+
+    .btn-change-excel {
+      background: #1c1c1c;
+      color: #ffffff;
+      border: 1px solid #3f3f46;
+      padding: 8px 13px;
+      border-radius: 8px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-change-excel:hover {
+      border-color: var(--fc-lime);
+      color: var(--fc-lime);
+    }
+
+    /* Barra de búsqueda fija arriba */
+    .search-bar-wrapper {
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .input-group {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      color: #6b7280;
+      font-size: 1.05rem;
+      pointer-events: none;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 13px 42px 13px 40px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      border: 2px solid #333333;
+      border-radius: 10px;
+      outline: none;
+      background: #ffffff;
+      color: var(--fc-black);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .search-input:focus {
+      border-color: var(--fc-lime);
+      box-shadow: 0 0 0 3px rgba(167, 200, 0, 0.25);
+    }
+
+    .search-input:disabled {
+      background: #262626;
+      color: #737373;
+      cursor: not-allowed;
+    }
+
+    .btn-clear {
+      position: absolute;
+      right: 11px;
+      background: #e5e7eb;
+      border: none;
+      color: #374151;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-clear.visible {
+      display: flex;
+    }
+
+    /* Contenido principal */
+    main {
+      flex: 1;
+      max-width: 820px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px 16px 44px 16px;
+    }
+
+    /* Zona de subida de Excel */
+    .upload-box {
+      background: var(--fc-surface);
+      border: 2px dashed #cbd5e1;
+      border-radius: 16px;
+      padding: 44px 24px;
+      text-align: center;
+      margin-top: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .upload-box:hover, .upload-box.dragover {
+      border-color: var(--fc-lime);
+      background: var(--fc-lime-soft);
+    }
+
+    .upload-icon {
+      font-size: 2.8rem;
+      margin-bottom: 12px;
+    }
+
+    .upload-box h2 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--fc-black);
+      margin-bottom: 8px;
+    }
+
+    .upload-box p {
+      font-size: 0.9rem;
+      color: var(--fc-muted);
+      max-width: 460px;
+      margin: 0 auto 20px auto;
+      line-height: 1.5;
+    }
+
+    .btn-primary-fc {
+      background: var(--fc-lime);
+      color: var(--fc-black);
+      border: none;
+      padding: 13px 24px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(167, 200, 0, 0.35);
+      transition: transform 0.1s, background 0.15s;
+    }
+
+    .btn-primary-fc:hover {
+      background: var(--fc-lime-bright);
+      transform: translateY(-1px);
+    }
+
+    /* Banner de sugerencia "¿Quisiste decir...?" */
+    .did-you-mean-box {
+      background: var(--fc-lime-soft);
+      border: 1.5px solid var(--fc-lime);
+      border-radius: 12px;
+      padding: 13px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .dym-label {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #364100;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dym-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .dym-chip {
+      background: var(--fc-black);
+      color: var(--fc-lime);
+      border: none;
+      padding: 6px 13px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.1s, background 0.15s;
+    }
+
+    .dym-chip:hover {
+      background: #262626;
+      transform: scale(1.03);
+    }
+
+    /* Tarjeta principal de resultado de un pueblo */
+    .town-card {
+      background: var(--fc-surface);
+      border-radius: 16px;
+      box-shadow: var(--shadow-card);
+      border: 1px solid var(--fc-border);
+      overflow: hidden;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .town-card-header {
+      background: var(--fc-black);
+      color: #ffffff;
+      padding: 20px 22px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 3px solid var(--fc-lime);
+    }
+
+    .town-name {
+      font-size: 1.45rem;
+      font-weight: 800;
+      letter-spacing: -0.2px;
+    }
+
+    .status-badge {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .status-badge.active {
+      background: var(--fc-lime);
+      color: var(--fc-black);
+    }
+
+    .status-badge.inactive {
+      background: #3f3f46;
+      color: #e4e4e7;
+    }
+
+    .town-metrics {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      padding: 22px;
+    }
+
+    @media (min-width: 600px) {
+      .town-metrics {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .metric-box {
+      background: #f9fafb;
+      border: 1px solid var(--fc-border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .metric-box.highlight {
+      background: var(--fc-lime-soft);
+      border-color: var(--fc-lime-border);
+    }
+
+    .metric-title {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--fc-muted);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .metric-value {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--fc-black);
+      line-height: 1.2;
+    }
+
+    .metric-value.days {
+      font-size: 1.12rem;
+    }
+
+    .metric-value.no-service {
+      color: var(--fc-danger);
+      font-size: 1.05rem;
+    }
+
+    .no-service-notice {
+      margin: 0 22px 22px 22px;
+      background: var(--fc-danger-bg);
+      border: 1px solid var(--fc-danger-border);
+      color: #991b1b;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 0.86rem;
+      font-weight: 600;
+    }
+
+    /* Lista de resultados múltiples */
+    .results-header {
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--fc-muted);
+      margin-bottom: 10px;
+      letter-spacing: 0.4px;
+    }
+
+    .town-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .town-row {
+      background: var(--fc-surface);
+      border: 1px solid var(--fc-border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .town-row:hover {
+      border-color: var(--fc-lime);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      transform: translateY(-1px);
+    }
+
+    .town-row-left {
+      min-width: 0;
+    }
+
+    .town-row-name {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--fc-black);
+    }
+
+    .town-row-sub {
+      font-size: 0.82rem;
+      color: var(--fc-muted);
+      margin-top: 3px;
+      font-weight: 500;
+    }
+
+    .town-row-right {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .pill-price {
+      display: inline-block;
+      background: var(--fc-lime);
+      color: var(--fc-black);
+      font-weight: 800;
+      font-size: 0.92rem;
+      padding: 5px 11px;
+      border-radius: 8px;
+    }
+
+    .pill-no-route {
+      display: inline-block;
+      background: #f3f4f6;
+      color: #6b7280;
+      font-weight: 700;
+      font-size: 0.78rem;
+      padding: 5px 10px;
+      border-radius: 8px;
+    }
+
+    /* Estados vacíos */
+    .empty-state {
+      text-align: center;
+      padding: 44px 20px;
+      background: var(--fc-surface);
+      border-radius: 16px;
+      border: 1px solid var(--fc-border);
+      color: var(--fc-muted);
+    }
+
+    .empty-state .icon {
+      font-size: 2.4rem;
+      margin-bottom: 10px;
+    }
+
+    .empty-state h3 {
+      color: var(--fc-black);
+      font-size: 1.05rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--fc-black);
+      color: var(--fc-lime);
+      border: 1px solid var(--fc-lime);
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <input type="file" id="excel-input" accept=".xlsx,.xls" style="display: none;" />
+
+  <header>
+    <div class="header-inner">
+      <div class="header-top">
+        <div class="brand-area">
+          <!-- Logo vectorial fiel a Family Cash (carrito verde lima + ruedas marrón/blanco + tipografía) -->
+          <svg class="fc-logo-svg" viewBox="0 0 365 92" xmlns="http://www.w3.org/2000/svg" aria-label="Family Cash">
+            <path d="M8 14 H24 L36 62 H96 L108 26 H31" fill="none" stroke="#a7c800" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="33" y1="38" x2="103" y2="38" stroke="#a7c800" stroke-width="3.2"/>
+            <line x1="35" y1="50" x2="99" y2="50" stroke="#a7c800" stroke-width="3.2"/>
+            <line x1="47" y1="26" x2="50" y2="62" stroke="#a7c800" stroke-width="3.2"/>
+            <line x1="62" y1="26" x2="63" y2="62" stroke="#a7c800" stroke-width="3.2"/>
+            <line x1="77" y1="26" x2="76" y2="62" stroke="#a7c800" stroke-width="3.2"/>
+            <line x1="92" y1="26" x2="88" y2="62" stroke="#a7c800" stroke-width="3.2"/>
+            <circle cx="48" cy="75" r="12" fill="#ffffff"/>
+            <circle cx="48" cy="75" r="6.5" fill="#422918"/>
+            <circle cx="84" cy="75" r="12" fill="#ffffff"/>
+            <circle cx="84" cy="75" r="6.5" fill="#422918"/>
+            <text x="118" y="64" fill="#ffffff" font-family="Montserrat, Arial, sans-serif" font-weight="800" font-size="54" letter-spacing="-1.5">family</text>
+            <text x="292" y="64" fill="#ffffff" font-family="Montserrat, Arial, sans-serif" font-style="italic" font-weight="500" font-size="31" letter-spacing="-0.5">cash</text>
+          </svg>
+
+          <div class="app-subtitle-box">
+            <div class="app-title">Portes y Reparto</div>
+            <div class="file-status" id="file-status">Sin tarifa cargada</div>
+          </div>
+        </div>
+
+        <button type="button" class="btn-change-excel" id="btn-change-file" title="Cargar o actualizar archivo Excel de pueblos">
+          <span>📂</span> Cambiar Excel
+        </button>
+      </div>
+
+      <div class="search-bar-wrapper">
+        <div class="input-group">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            id="search-input"
+            class="search-input"
+            placeholder="Escribe el nombre del pueblo (ej. Azuqueca, Brihuega...)"
+            autocomplete="off"
+            disabled
+          />
+          <button type="button" id="btn-clear" class="btn-clear" title="Limpiar búsqueda">✕</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Pantalla inicial de carga de Excel -->
+    <div id="upload-zone" class="upload-box">
+      <div class="upload-icon">🚚</div>
+      <h2>Cargar listado de portes por pueblo</h2>
+      <p>
+        Selecciona o arrastra aquí el archivo Excel (<strong>BD Pueblos.xlsx</strong>). Se guardará en el navegador para consultarlo al instante cuando lo necesites.
+      </p>
+      <button type="button" class="btn-primary-fc">
+        <span>Seleccionar Excel</span>
+      </button>
+    </div>
+
+    <!-- Contenedor dinámico para "¿Quisiste decir...?" -->
+    <div id="dym-zone"></div>
+
+    <!-- Contenedor dinámico de resultados -->
+    <div id="results-zone" style="display: none;"></div>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    // ==========================================
+    // 0. GENERACIÓN AUTOMÁTICA DE ICONO Y MANIFEST PWA PARA ANDROID
+    // ==========================================
+    (function setupAndroidAppIcon() {
+      try {
+        const size = 512;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        // Fondo negro redondeado estilo icono Android
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, size, size);
+
+        // Marco sutil verde lima
+        ctx.strokeStyle = '#a7c800';
+        ctx.lineWidth = 14;
+        ctx.strokeRect(18, 18, size - 36, size - 36);
+
+        // Dibujar el carrito icónico de Family Cash centrado
+        ctx.save();
+        ctx.translate(95, 92);
+        ctx.scale(2.85, 2.85);
+
+        // Estructura carrito
+        ctx.strokeStyle = '#a7c800';
+        ctx.lineWidth = 7.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(8, 14);
+        ctx.lineTo(24, 14);
+        ctx.lineTo(36, 62);
+        ctx.lineTo(96, 62);
+        ctx.lineTo(108, 26);
+        ctx.lineTo(31, 26);
+        ctx.stroke();
+
+        // Rejilla horizontal
+        ctx.lineWidth = 3.2;
+        ctx.beginPath();
+        ctx.moveTo(33, 38); ctx.lineTo(103, 38);
+        ctx.moveTo(35, 50); ctx.lineTo(99, 50);
+        // Rejilla vertical
+        ctx.moveTo(47, 26); ctx.lineTo(50, 62);
+        ctx.moveTo(62, 26); ctx.lineTo(63, 62);
+        ctx.moveTo(77, 26); ctx.lineTo(76, 62);
+        ctx.moveTo(92, 26); ctx.lineTo(88, 62);
+        ctx.stroke();
+
+        // Ruedas (exterior blanco, interior marrón)
+        [48, 84].forEach(cx => {
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(cx, 75, 12, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#422918';
+          ctx.beginPath();
+          ctx.arc(cx, 75, 6.5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.restore();
+
+        // Etiqueta inferior "PORTES" en verde lima
+        ctx.fillStyle = '#a7c800';
+        ctx.font = '800 58px Montserrat, Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('PORTES', size / 2, 432);
+
+        const pngDataUrl = canvas.toDataURL('image/png');
+
+        // Inyectar <link rel="icon"> y <link rel="apple-touch-icon">
+        const iconLink = document.createElement('link');
+        iconLink.rel = 'icon';
+        iconLink.type = 'image/png';
+        iconLink.sizes = '512x512';
+        iconLink.href = pngDataUrl;
+        document.head.appendChild(iconLink);
+
+        const appleIconLink = document.createElement('link');
+        appleIconLink.rel = 'apple-touch-icon';
+        appleIconLink.href = pngDataUrl;
+        document.head.appendChild(appleIconLink);
+
+        // Generar Web App Manifest dinámico apuntando a la URL actual (compatible con GitHub Pages)
+        const manifest = {
+          name: 'Portes y Reparto · Family Cash',
+          short_name: 'Portes FC',
+          description: 'Consulta rápida de precio de portes, kilómetros y días de reparto por municipio',
+          start_url: window.location.href,
+          scope: './',
+          display: 'standalone',
+          orientation: 'portrait',
+          background_color: '#000000',
+          theme_color: '#000000',
+          icons: [
+            {
+              src: pngDataUrl,
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'any maskable'
+            }
+          ]
+        };
+
+        const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+        const manifestUrl = URL.createObjectURL(manifestBlob);
+        const manifestLink = document.createElement('link');
+        manifestLink.rel = 'manifest';
+        manifestLink.href = manifestUrl;
+        document.head.appendChild(manifestLink);
+      } catch (e) {
+        console.warn('No se pudo generar el icono dinámico:', e);
+      }
+    })();
+
+    // ==========================================
+    // 1. PERSISTENCIA LOCAL (IndexedDB)
+    // ==========================================
+    const DB_NAME = 'FamilyCashPortesDB';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'portesStore';
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME);
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function saveTownsToDB(payload) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).put(payload, 'currentTowns');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function loadTownsFromDB() {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const req = tx.objectStore(STORE_NAME).get('currentTowns');
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    // ==========================================
+    // 2. NORMALIZACIÓN Y ALGORITMO "QUISISTE DECIR"
+    // ==========================================
+    function normalizeText(str) {
+      return String(str || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function phoneticSpanish(str) {
+      let s = normalizeText(str);
+      s = s.replace(/h/g, '');
+      s = s.replace(/qu([ei])/g, 'k$1');
+      s = s.replace(/c([aou])/g, 'k$1');
+      s = s.replace(/c([ei])/g, 'z$1');
+      s = s.replace(/v/g, 'b');
+      s = s.replace(/ll/g, 'y');
+      s = s.replace(/g([ei])/g, 'j$1');
+      s = s.replace(/gu([ei])/g, 'g$1');
+      s = s.replace(/ñ/g, 'n');
+      return s;
+    }
+
+    function levenshteinDistance(a, b) {
+      if (a === b) return 0;
+      if (!a.length) return b.length;
+      if (!b.length) return a.length;
+
+      const matrix = Array.from({ length: b.length + 1 }, (_, i) => [i]);
+      for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+
+      for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+          const cost = b[i - 1] === a[j - 1] ? 0 : 1;
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j - 1] + cost
+          );
+        }
+      }
+      return matrix[b.length][a.length];
+    }
+
+    function findSuggestions(query, list, maxSuggestions = 4) {
+      const qNorm = normalizeText(query);
+      const qPhon = phoneticSpanish(query);
+      if (qNorm.length < 2) return [];
+
+      const scored = [];
+
+      for (const item of list) {
+        if (item.norm === qNorm) continue;
+
+        let bestDist = Infinity;
+
+        const dFull = levenshteinDistance(qNorm, item.norm);
+        bestDist = Math.min(bestDist, dFull);
+
+        const dPhon = levenshteinDistance(qPhon, item.phon);
+        if (dPhon === 0) {
+          bestDist = 0.2;
+        } else {
+          bestDist = Math.min(bestDist, dPhon + 0.3);
+        }
+
+        const wordsNorm = item.norm.split(' ').filter(w => w.length >= 3);
+        const wordsPhon = item.phon.split(' ').filter(w => w.length >= 3);
+
+        for (const w of wordsNorm) {
+          bestDist = Math.min(bestDist, levenshteinDistance(qNorm, w) + 0.4);
+        }
+        for (const wp of wordsPhon) {
+          const dp = levenshteinDistance(qPhon, wp);
+          if (dp === 0) bestDist = Math.min(bestDist, 0.3);
+          else bestDist = Math.min(bestDist, dp + 0.5);
+        }
+
+        const maxAllowed = qNorm.length <= 4 ? 1.6 : (qNorm.length <= 7 ? 2.6 : 3.5);
+
+        if (bestDist <= maxAllowed) {
+          scored.push({ town: item, score: bestDist });
+        }
+      }
+
+      scored.sort((a, b) => a.score - b.score || a.town.pueblo.localeCompare(b.town.pueblo));
+      return scored.slice(0, maxSuggestions).map(s => s.town);
+    }
+
+    // ==========================================
+    // 3. ESTADO GLOBAL Y ELEMENTOS DEL DOM
+    // ==========================================
+    let townsData = [];
+    let currentFileName = '';
+
+    const excelInput = document.getElementById('excel-input');
+    const btnChangeFile = document.getElementById('btn-change-file');
+    const uploadZone = document.getElementById('upload-zone');
+    const dymZone = document.getElementById('dym-zone');
+    const resultsZone = document.getElementById('results-zone');
+    const searchInput = document.getElementById('search-input');
+    const btnClear = document.getElementById('btn-clear');
+    const fileStatus = document.getElementById('file-status');
+    const toastEl = document.getElementById('toast');
+
+    function showToast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      setTimeout(() => toastEl.classList.remove('show'), 2800);
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // ==========================================
+    // 4. LECTURA DEL EXCEL DE PUEBLOS
+    // ==========================================
+    async function processExcelFile(file) {
+      if (!file) return;
+
+      try {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: null });
+
+        let headerIdx = -1;
+        let colIdx = { pueblo: 0, km: 1, dia: 2, precio: 3 };
+
+        for (let r = 0; r < Math.min(rows.length, 15); r++) {
+          const row = rows[r];
+          if (!row) continue;
+          const normRow = row.map(c => normalizeText(c));
+          const pIdx = normRow.findIndex(h => h.includes('pueblo') || h.includes('localidad') || h.includes('municipio'));
+          if (pIdx !== -1) {
+            headerIdx = r;
+            colIdx = {
+              pueblo: pIdx,
+              km: normRow.findIndex(h => h.includes('kilometro') || h === 'km'),
+              dia: normRow.findIndex(h => h.includes('dia') || h.includes('entrega')),
+              precio: normRow.findIndex(h => h.includes('precio') || h.includes('porte') || h.includes('tarifa'))
+            };
+            break;
+          }
+        }
+
+        const startRow = headerIdx !== -1 ? headerIdx + 1 : 1;
+        const parsed = [];
+
+        for (let r = startRow; r < rows.length; r++) {
+          const row = rows[r];
+          if (!row) continue;
+
+          const rawPueblo = row[colIdx.pueblo];
+          if (!rawPueblo || String(rawPueblo).trim() === '') continue;
+
+          const pueblo = String(rawPueblo).trim();
+          const rawKm = colIdx.km !== -1 ? row[colIdx.km] : null;
+          const rawDia = colIdx.dia !== -1 ? row[colIdx.dia] : null;
+          const rawPrecio = colIdx.precio !== -1 ? row[colIdx.precio] : null;
+
+          const kmNum = parseFloat(String(rawKm ?? '').replace(',', '.'));
+          const kmText = !isNaN(kmNum) ? `${kmNum} km` : (rawKm !== null ? String(rawKm).trim() : '-');
+
+          const diaClean = rawDia !== null ? String(rawDia).trim() : 'Ø';
+          const hasService = diaClean !== '' && diaClean !== 'Ø' && diaClean !== '-' && diaClean.toUpperCase() !== 'NO';
+
+          let precioText = 'Sin servicio';
+          if (hasService && rawPrecio !== null && rawPrecio !== '') {
+            const pNum = parseFloat(String(rawPrecio).replace(',', '.'));
+            precioText = !isNaN(pNum) ? `${pNum.toFixed(2).replace('.', ',')} €` : String(rawPrecio).trim();
+          }
+
+          parsed.push({
+            pueblo,
+            norm: normalizeText(pueblo),
+            phon: phoneticSpanish(pueblo),
+            km: kmText,
+            dia: hasService ? diaClean.toUpperCase() : 'Sin reparto',
+            precio: precioText,
+            hasService
+          });
+        }
+
+        if (parsed.length === 0) {
+          throw new Error('No se encontraron pueblos en el archivo Excel.');
+        }
+
+        townsData = parsed;
+        currentFileName = file.name;
+
+        await saveTownsToDB({
+          fileName: file.name,
+          towns: parsed
+        });
+
+        activateApp();
+        showToast(`✅ Cargados ${parsed.length} pueblos correctamente`);
+      } catch (err) {
+        console.error(err);
+        alert('Error al leer el archivo Excel: ' + err.message);
+      } finally {
+        excelInput.value = '';
+      }
+    }
+
+    // ==========================================
+    // 5. BÚSQUEDA Y RENDERIZADO
+    // ==========================================
+    function activateApp() {
+      uploadZone.style.display = 'none';
+      resultsZone.style.display = 'block';
+      searchInput.disabled = false;
+      fileStatus.textContent = `${currentFileName} (${townsData.length} pueblos)`;
+      renderInitialScreen();
+      setTimeout(() => searchInput.focus(), 100);
+    }
+
+    function renderInitialScreen() {
+      dymZone.innerHTML = '';
+      resultsZone.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">📍</div>
+          <h3>Consulta rápida de portes y días de entrega</h3>
+          <p style="font-size: 0.9rem; max-width: 440px; margin: 0 auto;">
+            Escribe el nombre del municipio arriba para ver los kilómetros, el día de reparto y el importe del porte.
+          </p>
+        </div>
+      `;
+    }
+
+    function handleSearch(rawQuery) {
+      const q = rawQuery.trim();
+      btnClear.classList.toggle('visible', q.length > 0);
+      dymZone.innerHTML = '';
+
+      if (!q) {
+        renderInitialScreen();
+        return;
+      }
+
+      const qNorm = normalizeText(q);
+      const qPhon = phoneticSpanish(q);
+
+      const exact = townsData.find(t => t.norm === qNorm);
+      if (exact) {
+        renderTownDetail(exact);
+        return;
+      }
+
+      const startsWith = townsData.filter(t => t.norm.startsWith(qNorm));
+      const contains = townsData.filter(t => !t.norm.startsWith(qNorm) && t.norm.includes(qNorm));
+      const directMatches = [...startsWith, ...contains];
+
+      const suggestions = findSuggestions(q, townsData, 4);
+
+      if (directMatches.length > 0) {
+        const extraSuggestions = suggestions.filter(s => !directMatches.some(d => d.pueblo === s.pueblo));
+        if (extraSuggestions.length > 0 && directMatches.length <= 2) {
+          renderDidYouMean(extraSuggestions);
+        }
+
+        if (directMatches.length === 1 && qNorm.length >= 4) {
+          renderTownDetail(directMatches[0]);
+        } else {
+          renderTownList(directMatches, `Coincidencias encontradas (${directMatches.length})`);
+        }
+        return;
+      }
+
+      if (suggestions.length > 0) {
+        renderDidYouMean(suggestions);
+        if (suggestions[0].phon === qPhon || suggestions[0].phon.includes(qPhon)) {
+          renderTownDetail(suggestions[0]);
+        } else {
+          resultsZone.innerHTML = `
+            <div class="empty-state">
+              <div class="icon">🤔</div>
+              <h3>No encontramos "${escapeHtml(q)}" tal cual</h3>
+              <p style="font-size: 0.9rem;">Pulsa sobre alguna de las sugerencias de arriba si te referías a uno de esos pueblos.</p>
+            </div>
+          `;
+        }
+      } else {
+        resultsZone.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">🚫</div>
+            <h3>Sin resultados para "${escapeHtml(q)}"</h3>
+            <p style="font-size: 0.9rem;">Este municipio no aparece en el listado de pueblos cargado.</p>
+          </div>
+        `;
+      }
+    }
+
+    function renderDidYouMean(suggestions) {
+      const chipsHtml = suggestions.map(s => `
+        <button type="button" class="dym-chip" data-town="${escapeHtml(s.pueblo)}">
+          ${escapeHtml(s.pueblo)}
+        </button>
+      `).join('');
+
+      dymZone.innerHTML = `
+        <div class="did-you-mean-box">
+          <span class="dym-label">💡 ¿Quisiste decir:</span>
+          <div class="dym-chips">${chipsHtml}</div>
+          <span class="dym-label">?</span>
+        </div>
+      `;
+
+      dymZone.querySelectorAll('.dym-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const chosenName = btn.getAttribute('data-town');
+          searchInput.value = chosenName;
+          handleSearch(chosenName);
+        });
+      });
+    }
+
+    function renderTownDetail(town) {
+      const badgeHtml = town.hasService
+        ? `<span class="status-badge active">✓ Con reparto a domicilio</span>`
+        : `<span class="status-badge inactive">✕ Sin ruta de reparto</span>`;
+
+      const noticeHtml = !town.hasService
+        ? `<div class="no-service-notice">⚠️ Este municipio figura con día "Ø" en la tabla: actualmente no dispone de ruta de entrega establecida.</div>`
+        : '';
+
+      resultsZone.innerHTML = `
+        <div class="town-card">
+          <div class="town-card-header">
+            <h2 class="town-name">${escapeHtml(town.pueblo)}</h2>
+            ${badgeHtml}
+          </div>
+
+          <div class="town-metrics">
+            <div class="metric-box ${town.hasService ? 'highlight' : ''}">
+              <div class="metric-title">💶 Precio del porte</div>
+              <div class="metric-value ${!town.hasService ? 'no-service' : ''}">
+                ${escapeHtml(town.precio)}
+              </div>
+            </div>
+
+            <div class="metric-box">
+              <div class="metric-title">📅 Días de entrega</div>
+              <div class="metric-value days ${!town.hasService ? 'no-service' : ''}">
+                ${escapeHtml(town.dia)}
+              </div>
+            </div>
+
+            <div class="metric-box">
+              <div class="metric-title">🛣️ Distancia</div>
+              <div class="metric-value">
+                ${escapeHtml(town.km)}
+              </div>
+            </div>
+          </div>
+
+          ${noticeHtml}
+        </div>
+      `;
+    }
+
+    function renderTownList(list, titleText) {
+      const rowsHtml = list.slice(0, 40).map((t, idx) => `
+        <div class="town-row" data-idx="${idx}">
+          <div class="town-row-left">
+            <div class="town-row-name">${escapeHtml(t.pueblo)}</div>
+            <div class="town-row-sub">
+              ${escapeHtml(t.km)} · ${t.hasService ? `Entrega: <strong>${escapeHtml(t.dia)}</strong>` : 'Sin reparto asignado'}
+            </div>
+          </div>
+          <div class="town-row-right">
+            ${t.hasService
+              ? `<span class="pill-price">${escapeHtml(t.precio)}</span>`
+              : `<span class="pill-no-route">Sin servicio</span>`
+            }
+          </div>
+        </div>
+      `).join('');
+
+      resultsZone.innerHTML = `
+        <div class="results-header">${escapeHtml(titleText)}</div>
+        <div class="town-list">${rowsHtml}</div>
+      `;
+
+      resultsZone.querySelectorAll('.town-row').forEach((rowEl, idx) => {
+        rowEl.addEventListener('click', () => {
+          const selected = list[idx];
+          searchInput.value = selected.pueblo;
+          dymZone.innerHTML = '';
+          renderTownDetail(selected);
+        });
+      });
+    }
+
+    // ==========================================
+    // 6. EVENTOS E INICIALIZACIÓN
+    // ==========================================
+    btnChangeFile.addEventListener('click', () => excelInput.click());
+    uploadZone.addEventListener('click', () => excelInput.click());
+
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) {
+        processExcelFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    excelInput.addEventListener('change', (e) => {
+      if (e.target.files.length) {
+        processExcelFile(e.target.files[0]);
+      }
+    });
+
+    searchInput.addEventListener('input', (e) => {
+      handleSearch(e.target.value);
+    });
+
+    btnClear.addEventListener('click', () => {
+      searchInput.value = '';
+      handleSearch('');
+      searchInput.focus();
+    });
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const saved = await loadTownsFromDB();
+        if (saved && Array.isArray(saved.towns) && saved.towns.length > 0) {
+          townsData = saved.towns;
+          currentFileName = saved.fileName || 'BD Pueblos.xlsx';
+          activateApp();
+        }
+      } catch (e) {
+        console.warn('Error leyendo IndexedDB:', e);
+      }
+    });
+  </script>
+</body>
+</html>
